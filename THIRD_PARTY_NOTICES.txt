@@ -1,0 +1,162 @@
+WarbandUI.dll: third-party notices
+
+WarbandUI.dll is part of Warband by Seth Summers.
+
+Linked into the dll are two open-source libraries: CommonLibSSE NG (MinLL/CommonLibVR) and spdlog.
+Used through an interface header, with nothing of theirs linked in but what such a header holds: Magelight UI
+(MagelightUI_API.h), Prisma UI (PrismaUI_API.h) and SKSE Menu Framework (SKSEMenuFramework.h, whose declarations
+follow Dear ImGui's interface). The notices and licence texts that belong to these follow, in that order:
+CommonLibSSE NG, spdlog, the three interface headers, Dear ImGui.
+
+====================================================================================================
+CommonLibSSE NG, MinLL/CommonLibVR release 4.39.5 (branch ng, commit 550cc4f)
+https://github.com/MinLL/CommonLibVR
+An MIT continuation of CommonLibSSE NG (by alandtse, after CharmedBaryon's CommonLibSSE-NG and Ryan McKenzie's
+CommonLibSSE), branched from its last MIT release, v4.39.3.
+====================================================================================================
+MIT License
+
+Copyright (c) 2018 Ryan-rsm-McKenzie
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+====================================================================================================
+spdlog 1.16.0 by Gabi Melman and contributors
+https://github.com/gabime/spdlog
+====================================================================================================
+The MIT License (MIT)
+
+Copyright (c) 2016 - present, Gabi Melman and spdlog contributors.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+-- NOTE: Third party dependency used by this software --
+This software depends on the fmt lib (MIT License),
+and users must comply to its license: https://raw.githubusercontent.com/fmtlib/fmt/master/LICENSE
+
+(spdlog is built here on the C++ standard library's std::format. The fmt library is not part of WarbandUI.dll.)
+
+====================================================================================================
+Interfaces of other mods
+====================================================================================================
+WarbandUI.dll talks to three other mods through the interface header each of them publishes for plugin authors.
+
+MagelightUI_API.h is the plugin interface of Magelight UI by Severause, compiled in unchanged from
+https://github.com/Severause/MagelightUI (api/MagelightUI_API.h, commit 9acebb2), published under this licence:
+
+MIT License
+
+Copyright (c) 2026 Severause
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+PrismaUI_API.h is the plugin interface of Prisma UI by StarkMP, published as a template for mod authors with its
+plugin example at https://github.com/PrismaUI-SKSE/example-skse-plugin ("For modders: Copy this file into your own
+project"). The file carries no licence text inside it.
+
+SKSEMenuFramework.h is the plugin interface of SKSE Menu Framework by Thiago Kaique. The copy compiled into
+WarbandUI.dll is the file include/SKSEMenuFramework.h of https://github.com/QTR-Modding/SKSE-Menu-Framework-3-Example
+(identical to it apart from line endings, checked against commit aa8effa), which is published under this licence:
+
+MIT License
+
+Copyright (c) 2024 <Thiago Kaique>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+The header declares, under its own names, functions, structures and constants that follow the interface of Dear ImGui;
+Dear ImGui's notice follows.
+
+====================================================================================================
+Dear ImGui by Omar Cornut and contributors
+https://github.com/ocornut/imgui
+====================================================================================================
+Of Dear ImGui, WarbandUI.dll holds only what SKSEMenuFramework.h holds of it: names and signatures of functions,
+structures and constants in an interface header. No Dear ImGui code is in the dll; the functions themselves are in
+SKSE Menu Framework's own dll.
+
+The MIT License (MIT)
+
+Copyright (c) 2014-2026 Omar Cornut
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

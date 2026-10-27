@@ -1,0 +1,9 @@
+Copyright (c) 2026 Seth Summers. All rights reserved.
+
+This source code is published so that it can be read and reviewed. No permission is granted to copy, modify, merge,
+publish, distribute, sublicense or sell it, or to use it in whole or in part in other software, without written
+permission from the author.
+
+Third-party components keep their own licences. They are listed with their notices in THIRD_PARTY_NOTICES.txt:
+CommonLibSSE NG (MinLL/CommonLibVR, MIT), spdlog (MIT), and the API headers of Magelight UI (MIT), Prisma UI and
+SKSE Menu Framework (MIT).
