@@ -1,5 +1,7 @@
 #pragma once
 
+#include "game/Canary.h"
+
 namespace FollowerLines
 {
 	struct Added
@@ -26,7 +28,10 @@ namespace FollowerLines
 				a.linked = false;
 				continue;
 			}
-			for (auto** link = &info->objConditions.head; *link; link = &(*link)->next) {
+			if (Game::Canary::ConditionsProblem(info) != nullptr) {
+				continue;
+			}
+			for (auto** link = &info->objConditions.head; *link && Game::Canary::Readable(*link, sizeof(RE::TESConditionItem)); link = &(*link)->next) {
 				if (*link == a.item) {
 					*link = a.item->next;
 					break;
@@ -46,6 +51,11 @@ namespace FollowerLines
 			if (!info) {
 				continue;
 			}
+			if (const char* problem = Game::Canary::ConditionsProblem(info)) {
+				Game::Canary::FailFollowerLines(problem);
+				Unlink();
+				return;
+			}
 			a.item->data.functionData.params[0] = a_band;
 			a.item->next = info->objConditions.head;
 			info->objConditions.head = a.item;
@@ -55,11 +65,17 @@ namespace FollowerLines
 
 	inline void Apply(RE::FormID a_bandID, bool a_hide)
 	{
+		if (!Game::Canary::followerLines.load()) {
+			if (std::any_of(added.begin(), added.end(), [](const Added& a) { return a.linked; })) {
+				Unlink();
+			}
+			return;
+		}
 		auto* band = a_bandID ? RE::TESForm::LookupByID<RE::TESFaction>(a_bandID) : nullptr;
 		if (!band) {
 			if (std::any_of(added.begin(), added.end(), [](const Added& a) { return a.linked; })) {
 				Unlink();
-				logger::info("follower lines: the game's own follower and hireling lines are as they were again");
+				logger::info("follower lines: the game's own follower lines are as they were again");
 			}
 			return;
 		}
@@ -74,6 +90,8 @@ namespace FollowerLines
 				return;
 			}
 			std::vector<std::pair<RE::FormID, bool>> infos;
+			const char* problem = nullptr;
+			int         sampled = 0, sane = 0;
 			{
 				const auto& [map, lock] = RE::TESForm::GetAllForms();
 				const RE::BSReadLockGuard guard{ lock };
@@ -83,16 +101,43 @@ namespace FollowerLines
 							continue;
 						}
 						const auto* info = static_cast<const RE::TESTopicInfo*>(form);
+						if (sampled < 16) {
+							++sampled;
+							if ((problem = Game::Canary::ConditionsProblem(info)) != nullptr) {
+								break;
+							}
+						}
 						const auto* topic = info->parentTopic;
 						const bool  follower = quest && topic && topic->ownerQuest == quest && topic->data.subtype.get() == RE::DIALOGUE_DATA::Subtype::kCustom;
 						const bool  hireling = hireQuest && topic && topic->ownerQuest == hireQuest;
 						if (follower || hireling) {
+							if ((problem = Game::Canary::ConditionsProblem(info)) != nullptr) {
+								break;
+							}
+							if (const auto* head = info->objConditions.head) {
+								if (!Game::Canary::SaneCondition(head)) {
+									problem = "a follower line's first condition reads as a condition (a known function, comparison and run-on)";
+									break;
+								}
+								++sane;
+							}
 							infos.emplace_back(id, hireling);
 						}
 					}
 				}
 			}
+			if (problem) {
+				Game::Canary::FailFollowerLines(problem);
+				return;
+			}
 			if (infos.empty()) {
+				return;
+			}
+			if (sane == 0) {
+				Game::Canary::followerLines.store(false);
+				logger::warn("follower lines: none of the {} lines of the game's follower and hireling quests carries a condition by which the layout "
+							 "could be checked, so the lines are left as the game has them this session",
+					infos.size());
 				return;
 			}
 			added.reserve(infos.size());

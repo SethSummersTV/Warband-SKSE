@@ -1,5 +1,7 @@
 #pragma once
 
+#include "game/Canary.h"
+
 namespace FightStyle
 {
 	inline std::mutex lock;
@@ -30,9 +32,14 @@ namespace FightStyle
 			SKSE::GetTaskInterface()->AddTask([handle, ours]() {
 				auto ptr = handle.get();
 				auto* actor = ptr.get();
+				Game::Canary::EnsureRan();
+				if (!Game::Canary::actors.load()) {
+					return;
+				}
 				auto* npc = actor ? actor->GetActorBase() : nullptr;
 				if (auto* controller = actor ? actor->GetActorRuntimeData().combatController : nullptr; controller && npc) {
-					if (controller->combatStyle && controller->combatStyle->GetFormID() == ours) {
+					if (Game::Canary::StyleSlot(controller) == Game::Canary::Slot::kUse && controller->combatStyle &&
+						controller->combatStyle->GetFormID() == ours) {
 						controller->combatStyle = npc->GetCombatStyle();
 					}
 				}
@@ -52,6 +59,10 @@ namespace FightStyle
 		if (list.empty()) {
 			return;
 		}
+		Game::Canary::EnsureRan();
+		if (!Game::Canary::actors.load() || !Game::Canary::fightStyles.load()) {
+			return;
+		}
 		for (const auto& [actorID, styleID] : list) {
 			auto* actor = RE::TESForm::LookupByID<RE::Actor>(actorID);
 			auto* style = RE::TESForm::LookupByID<RE::TESCombatStyle>(styleID);
@@ -61,7 +72,17 @@ namespace FightStyle
 				continue;
 			}
 			auto* controller = actor->GetActorRuntimeData().combatController;
-			if (!controller || controller->combatStyle == style) {
+			if (!controller) {
+				continue;
+			}
+			const auto slot = Game::Canary::StyleSlot(controller);
+			if (slot == Game::Canary::Slot::kOff) {
+				return;
+			}
+			if (slot == Game::Canary::Slot::kWait) {
+				continue;
+			}
+			if (controller->combatStyle == style) {
 				continue;
 			}
 			const auto* before = controller->combatStyle;

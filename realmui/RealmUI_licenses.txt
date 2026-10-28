@@ -1,19 +1,9 @@
-RealmUI.dll: third-party notices
+RealmUI.dll (the Your Estates screen bridge) is built by Seth Summers.
+It links two open-source libraries. Their licences ask that these notices travel with the dll.
 
-RealmUI.dll is part of Warband by Seth Summers.
-
-Linked into the dll are two open-source libraries: CommonLibSSE NG (MinLL/CommonLibVR) and spdlog.
-Used through its interface header, with nothing of it linked in but what the header holds: Prisma UI (PrismaUI_API.h),
-the plugin interface Prisma UI publishes with its plugin example at https://github.com/PrismaUI-SKSE/example-skse-plugin
-("For modders: Copy this file into your own project if you wish to use this API").
-
-
-====================================================================================================
-CommonLibSSE NG, MinLL/CommonLibVR release 4.39.5 (branch ng, commit 550cc4f)
-https://github.com/MinLL/CommonLibVR
-An MIT continuation of CommonLibSSE NG (by alandtse, after CharmedBaryon's CommonLibSSE-NG and Ryan McKenzie's
-CommonLibSSE), branched from its last MIT release, v4.39.3.
-====================================================================================================
+==============================================================================
+CommonLibSSE-NG 3.7.0 (https://github.com/CharmedBaryon/CommonLibSSE-NG), a fork of CommonLibSSE
+==============================================================================
 MIT License
 
 Copyright (c) 2018 Ryan-rsm-McKenzie
@@ -36,10 +26,9 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-====================================================================================================
-spdlog 1.16.0 by Gabi Melman and contributors
-https://github.com/gabime/spdlog
-====================================================================================================
+==============================================================================
+spdlog (https://github.com/gabime/spdlog)
+==============================================================================
 The MIT License (MIT)
 
 Copyright (c) 2016 - present, Gabi Melman and spdlog contributors.
@@ -65,5 +54,3 @@ THE SOFTWARE.
 -- NOTE: Third party dependency used by this software --
 This software depends on the fmt lib (MIT License),
 and users must comply to its license: https://raw.githubusercontent.com/fmtlib/fmt/master/LICENSE
-
-(spdlog is built here on the C++ standard library's std::format. The fmt library is not part of RealmUI.dll.)

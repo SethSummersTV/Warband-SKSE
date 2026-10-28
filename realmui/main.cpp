@@ -1,5 +1,8 @@
 #include "PrismaUI_API.h"
-#include "log_file.h"
+#include "game/AddressDb.h"
+#include "game/AddressIds.h"
+#include "game/LibraryBridge.h"
+#include "game/Log.h"
 
 namespace
 {
@@ -85,7 +88,6 @@ namespace
 			const std::string one = names.substr(at, end - at);
 			bool have = false;
 			if (!data.empty() && PlainPluginName(one)) {
-
 				try {
 					std::error_code ec;
 					have = std::filesystem::is_regular_file(data / std::wstring(one.begin(), one.end()), ec) && !ec;
@@ -245,7 +247,6 @@ namespace
 			SKSE::GetTaskInterface()->AddTask([]() { HideView(); });
 			[[fallthrough]];
 		case SKSE::MessagingInterface::kPostLoadGame:
-
 			if (a_msg->type == SKSE::MessagingInterface::kNewGame || a_msg->data != nullptr) {
 				SKSE::GetTaskInterface()->AddTask([]() {
 					SKSE::ModCallbackEvent ev{ "Realm_HostCall", RE::BSFixedString(""), 0.0f, nullptr };
@@ -262,33 +263,109 @@ namespace
 
 namespace
 {
+	constexpr const char* kWithout = "The estate mods keep their list menus";
+
+	bool Preflight(const Game::RuntimeInfo& a_rt, const Game::AddressDb& a_db)
+	{
+		int missing = 0;
+		for (const auto& id : Game::kAddressIds) {
+			const auto want = a_rt.UsesAeIds() ? id.ae : id.se;
+			if (want != 0 && a_db.Has(want)) {
+				continue;
+			}
+			++missing;
+			logger::error("Address Library id {} ({}) is not in this game's database", want, id.what);
+		}
+		if (missing == 0) {
+			logger::info("Address Library format {}: {} ids, and all {} that RealmUI uses are among them", a_db.format, a_db.rows.size(),
+				std::size(Game::kAddressIds));
+		}
+		return missing == 0;
+	}
+
 	bool Start(const SKSE::LoadInterface* a_skse)
 	{
-		SKSE::Init(a_skse, false);
-		logger::info("RealmUI {} on Skyrim {}", SKSE::PluginDeclaration::GetSingleton()->GetVersion().string("."), REL::Module::get().version().string("."));
+		const auto& rt = Game::Runtime();
+		if (!rt.read) {
+			logger::error("RealmUI 2.0.0: the game's version could not be read from its exe. The screen stays off. {}", kWithout);
+			return false;
+		}
+		logger::info("RealmUI 2.0.0 on Skyrim {} ({})", rt.version.Text(), rt.LineName());
+		if (rt.line == Game::Line::kUnknown) {
+			logger::error("this game version is not one RealmUI runs on (1.5.97, 1.6.317 and later 1.6, 1.7). The screen stays off. {}", kWithout);
+			return false;
+		}
+		if (rt.NewerThanChecked()) {
+			logger::warn("this build of the game is newer than the newest one this dll was checked against ({}). It runs: RealmUI reads "
+						 "no game structure of its own, only the script machine through the checked Address Library numbers",
+				rt.Ae17() ? "1.7.104" : "1.6.1179");
+		}
+		Game::Version byName;
+		if (GetEnvironmentVariableW(L"SKSE_RUNTIME", nullptr, 0) > 1) {
+			logger::error("the environment variable SKSE_RUNTIME is set, which this build's game library cannot work with. The screen "
+						  "stays off. {}",
+				kWithout);
+			return false;
+		}
+		if (GetModuleHandleW(L"SkyrimSE.exe") != GetModuleHandleW(nullptr) || GetModuleHandleW(L"SkyrimVR.exe") != nullptr ||
+			Game::detail::ReadExeVersion(L"SkyrimSE.exe", byName) != 1 || byName != rt.version) {
+			logger::error("the game's exe is not running under the name SkyrimSE.exe, or Windows cannot read its version by that name. "
+						  "The screen stays off. {}",
+				kWithout);
+			return false;
+		}
+		Game::AddressDb db;
+		std::string     why;
+		auto            file = Game::AddressDb::FileFor(rt);
+		const auto      slash = file.find_last_of(L'\\');
+		const auto      bare = file.substr(slash == std::wstring::npos ? 0 : slash + 1);
+		const auto      fileName = SKSE::stl::utf16_to_utf8(bare).value_or("the Address Library file");
+		if (!db.Load(file, rt.version, why)) {
+			std::string whyRelative;
+			if (!db.Load(L"Data\\SKSE\\Plugins\\" + bare, rt.version, whyRelative)) {
+				logger::error("Address Library for SKSE Plugins: Data\\SKSE\\Plugins\\{}: {}. The screen stays off (install or update "
+							  "Address Library for SKSE Plugins). {}",
+					fileName, why, kWithout);
+				return false;
+			}
+		}
+		logger::info("Address Library: {}", fileName);
+		if (!Preflight(rt, db)) {
+			logger::error("the screen stays off on this game version: the ids above are missing. {}", kWithout);
+			return false;
+		}
+		if (!Game::Bridge::Start(rt, db, why)) {
+			logger::error("{}. The screen stays off. {}", why, kWithout);
+			return false;
+		}
+		db.Free();
+
+		SKSE::Init(a_skse);
 		const auto* messaging = SKSE::GetMessagingInterface();
 		const auto* papyrus = SKSE::GetPapyrusInterface();
 		if (!messaging || !papyrus || !SKSE::GetTaskInterface()) {
-			logger::error("SKSE did not provide its messaging, Papyrus or task interface; RealmUI does not start");
+			logger::error("SKSE did not hand over its messaging, Papyrus or task interface. The screen stays off. {}", kWithout);
 			return false;
 		}
 		messaging->RegisterListener("SKSE", MessageHandler);
 		papyrus->Register(RegisterFuncs);
+		logger::info("started: the Your Estates screen is on");
 		return true;
 	}
 }
 
 SKSEPluginLoad(const SKSE::LoadInterface* a_skse)
 {
-	if (Win::OpenLog(L"RealmUI.log") == 2) {
-		logger::warn("the SKSE log folder could not be written; this log is in the Windows temporary folder");
+	if (const int where = Game::OpenLog(L"RealmUI.log"); where == 2) {
+		logger::warn("the log could not be opened in SKSE's log folder (Documents\\My Games\\...\\SKSE): this is the fallback, "
+					 "RealmUI.log in the Windows temporary folder");
 	}
 	try {
-		return Start(a_skse);
+		Start(a_skse);
 	} catch (const std::exception& e) {
-		logger::error("RealmUI does not start: {}", e.what());
+		logger::error("RealmUI stays off: {}", e.what());
 	} catch (...) {
-		logger::error("RealmUI does not start: unknown error");
+		logger::error("RealmUI stays off: an unknown error at start-up");
 	}
-	return false;
+	return true;
 }

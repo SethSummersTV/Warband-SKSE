@@ -1,5 +1,5 @@
 #pragma once
-namespace Win
+namespace Game
 {
 	[[nodiscard]] inline HWND Window() noexcept
 	{

@@ -1,6 +1,6 @@
-set_xmakever("3.0.0")
+set_xmakever("2.8.2")
 
-includes("extern/CommonLibVR")
+includes("extern/CommonLibSSE-NG")
 
 set_project("Warband-SKSE")
 set_languages("c++23")

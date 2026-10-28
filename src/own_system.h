@@ -2,14 +2,10 @@
 
 namespace OwnSystem
 {
-	inline RE::BSScript::IVirtualMachine* Machine()
-	{
-		return RE::BSScript::Internal::VirtualMachine::GetSingleton();
-	}
+	inline RE::BSScript::IVirtualMachine* vm = nullptr;
 
 	inline bool Has(const std::string& a_script, const std::string& a_fn)
 	{
-		auto* vm = Machine();
 		if (!vm || a_script.empty() || a_fn.empty()) {
 			return false;
 		}
@@ -37,7 +33,6 @@ namespace OwnSystem
 
 	inline bool PointsAt(RE::TESQuest* a_quest, const std::string& a_script, RE::Actor* a_actor)
 	{
-		auto* vm = Machine();
 		if (!vm || !a_quest || !a_actor || a_script.empty()) {
 			return false;
 		}
@@ -104,7 +99,6 @@ namespace OwnSystem
 
 	inline bool Call(RE::TESQuest* a_quest, const std::string& a_script, const std::string& a_fn)
 	{
-		auto* vm = Machine();
 		if (!vm || !a_quest || !Has(a_script, a_fn)) {
 			return false;
 		}

@@ -25,8 +25,6 @@
 #include <array>
 #include <atomic>
 #include <chrono>
-#include <condition_variable>
-#include <deque>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -35,7 +33,6 @@
 #include <functional>
 #include <mutex>
 #include <optional>
-#include <span>
 #include <string>
 #include <string_view>
 #include <thread>

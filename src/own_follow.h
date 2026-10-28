@@ -1,4 +1,5 @@
 #pragma once
+#include "game/Canary.h"
 
 namespace OwnFollow
 {
@@ -6,13 +7,14 @@ namespace OwnFollow
 	inline constexpr RE::FormID kPotentialFollowerFaction = 0x05C84D;
 	inline constexpr RE::FormID kPlayerFollowerCount = 0x0BCC98;
 
-	inline RE::TESFaction*    currentFollower = nullptr;
-	inline RE::TESFaction*    potentialFollower = nullptr;
-	inline RE::TESGlobal*     followerCount = nullptr;
+	inline RE::TESFaction* currentFollower = nullptr;
+	inline RE::TESFaction* potentialFollower = nullptr;
+	inline RE::TESGlobal*  followerCount = nullptr;
 	inline const RE::TESFile* warbandFile = nullptr;
-	inline RE::FormID         lastSpeaker = 0;
-	inline RE::FormID         lastLine = 0;
-	inline std::uint64_t      lastSent = 0;
+	inline RE::FormID      lastSpeaker = 0;
+	inline RE::FormID      lastLine = 0;
+	inline std::uint64_t   lastSent = 0;
+	inline int             seenBad = 0;
 
 	inline bool Holds(RE::CONDITION_ITEM_DATA::OpCode a_op, float a_value, float a_to)
 	{
@@ -60,6 +62,9 @@ namespace OwnFollow
 	inline bool IsRecruitLine(const RE::TESTopicInfo* a_info)
 	{
 		using Fn = RE::FUNCTION_DATA::FunctionID;
+		if (Game::Canary::ConditionsProblem(a_info) != nullptr) {
+			return false;
+		}
 		const auto* topic = a_info->parentTopic;
 		if (!topic || topic->data.type.get() != RE::DIALOGUE_TYPE::kPlayerDialogue) {
 			return false;
@@ -70,11 +75,11 @@ namespace OwnFollow
 		bool notFollowing = false, mayFollow = false, prevOr = false;
 		int  n = 0;
 		for (const auto* c = a_info->objConditions.head; c; c = c->next) {
-			if (++n > 256) {
+			if (++n > 256 || !Game::Canary::SaneCondition(c)) {
 				return false;
 			}
 			const auto& d = c->data;
-			const bool  inOr = prevOr || d.flags.isOR;
+			const bool inOr = prevOr || d.flags.isOR;
 			prevOr = d.flags.isOR;
 			if (inOr || d.flags.global) {
 				continue;
@@ -106,7 +111,15 @@ namespace OwnFollow
 	{
 		auto* info = RE::TESForm::LookupByID<RE::TESTopicInfo>(a_line);
 		auto* speaker = RE::TESForm::LookupByID<RE::Actor>(a_speaker);
-		if (!info || !speaker || !IsRecruitLine(info)) {
+		if (!info || !speaker) {
+			if (seenBad < 3) {
+				++seenBad;
+				logger::info("own follow line: an event in the dialogue menu named {:08X} / {:08X}, which are not a line and a person: ignored",
+					a_line, a_speaker);
+			}
+			return;
+		}
+		if (!IsRecruitLine(info)) {
 			return;
 		}
 		const auto now = GetTickCount64();
@@ -132,12 +145,16 @@ namespace OwnFollow
 			if (!a_event || !ui || !ui->IsMenuOpen(RE::DialogueMenu::MENU_NAME)) {
 				return RE::BSEventNotifyControl::kContinue;
 			}
-			const auto* who = a_event->speakerRef.get();
-			if (!who || !who->Is(RE::FormType::ActorCharacter) || who == RE::PlayerCharacter::GetSingleton()) {
+			const auto* raw = reinterpret_cast<const std::byte*>(a_event);
+			if (!Game::Canary::Readable(raw, 0x18)) {
+				return RE::BSEventNotifyControl::kContinue;
+			}
+			const auto* who = *reinterpret_cast<const RE::TESObjectREFR* const*>(raw);
+			const auto  line = *reinterpret_cast<const RE::FormID*>(raw + 0x10);
+			if (!who || !Game::Canary::Is(who, "Character")) {
 				return RE::BSEventNotifyControl::kContinue;
 			}
 			const auto speaker = who->GetFormID();
-			const auto line = a_event->topicInfoFormID;
 			if (auto* tasks = SKSE::GetTaskInterface()) {
 				tasks->AddTask([speaker, line]() { Check(speaker, line); });
 			}

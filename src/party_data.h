@@ -1,20 +1,8 @@
 #pragma once
+#include "game/Player.h"
 
 namespace PartyData
 {
-	inline constexpr RE::FormID kGold = 0x0000000F;
-
-	inline std::int32_t GoldOf(RE::Actor* a_actor)
-	{
-		auto* gold = a_actor ? RE::TESForm::LookupByID<RE::TESBoundObject>(kGold) : nullptr;
-		if (!gold) {
-			return 0;
-		}
-		const auto inventory = a_actor->GetInventory([](RE::TESBoundObject& a_object) { return a_object.GetFormID() == kGold; });
-		const auto it = inventory.find(gold);
-		return it != inventory.end() ? it->second.first : 0;
-	}
-
 	inline std::string Esc(std::string_view a_in)
 	{
 		std::string out;
@@ -184,8 +172,8 @@ namespace PartyData
 			}
 		};
 		if (a_actor->IsPlayerRef()) {
-			if (auto* player = RE::PlayerCharacter::GetSingleton()) {
-				for (auto* perk : player->GetPlayerRuntimeData().perks) {
+			if (const auto* perks = Game::PlayerPerks()) {
+				for (auto* perk : *perks) {
 					add(perk);
 				}
 			}
@@ -275,7 +263,7 @@ namespace PartyData
 		const bool isPlayer = a_actor->IsPlayerRef();
 		const bool isPet = a_extra.find("\"pet\":") != std::string::npos;
 		if (isPlayer) {
-			j += ",\"gold\":" + std::to_string(GoldOf(a_actor));
+			j += ",\"gold\":" + std::to_string(Game::GoldOf(a_actor));
 		}
 		if (isPlayer || !isPet) {
 			j += ",\"carry\":" + Str(std::to_string(AV(a_actor, AVs::kInventoryWeight)) + " / " +

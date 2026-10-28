@@ -1,7 +1,7 @@
 #pragma once
 #include <share.h>
 
-namespace Win
+namespace Game
 {
 	class WideFileSink final : public spdlog::sinks::base_sink<std::mutex>
 	{
@@ -49,7 +49,7 @@ namespace Win
 				if (!sink->IsOpen()) {
 					return false;
 				}
-				auto log = std::make_shared<spdlog::logger>("WarbandUI", std::move(sink));
+				auto log = std::make_shared<spdlog::logger>("RealmUI", std::move(sink));
 				log->set_level(spdlog::level::info);
 				log->flush_on(spdlog::level::info);
 				log->set_pattern("[%H:%M:%S.%e] [%t] [%L] %v");

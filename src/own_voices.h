@@ -1,4 +1,5 @@
 #pragma once
+#include "game/Canary.h"
 
 namespace OwnVoices
 {
@@ -18,12 +19,14 @@ namespace OwnVoices
 	inline RE::TESFaction*   band = nullptr;
 	inline RE::TESFaction*   currentFollower = nullptr;
 	inline bool              ready = false;
+	inline bool              canProve = false;
 	inline bool              proven = false;
 	inline bool              pointed = false;
 	inline bool              off = false;
 
-	inline void Start()
+	inline void Start(bool a_canProve)
 	{
+		canProve = a_canProve;
 		auto* dh = RE::TESDataHandler::GetSingleton();
 		if (!dh || !dh->LookupModByName("Warband.esp") || !dh->LookupModByName("Skyrim.esm")) {
 			return;
@@ -43,11 +46,12 @@ namespace OwnVoices
 		const auto* probe = dh->LookupForm<RE::TESTopicInfo>(0x000AFE, "Warband.esp");
 		const auto* want = dh->LookupForm<RE::TESTopicInfo>(0x0E26F4, "Skyrim.esm");
 		const RE::FormID held = probe && probe->dataInfo ? probe->dataInfo->GetFormID() : 0;
-		logger::info("own voices: {} (the plugin's borrowed line 000AFE holds {:08X}, its DNAM in the plugin is {:08X})",
-			ready ? "ready" : "NOT ready: a line, topic or faction it needs is missing", held, want ? want->GetFormID() : 0);
+		logger::info("own voices: {} (the plugin's borrowed line 000AFE holds {:08X}, its DNAM in the plugin is {:08X}{})",
+			ready ? "ready" : "NOT ready: a line, topic or faction it needs is missing", held, want ? want->GetFormID() : 0,
+			canProve ? "" : "; the proof's game call is not in this Address Library, so nothing is pointed");
 		if (probe && want && held != 0 && held != want->GetFormID()) {
 			off = true;
-			logger::info("own voices: off until the game restarts: a line's response-data pointer holds something other than its DNAM");
+			logger::info("own voices: OFF this session: a line's response-data pointer holds something other than its DNAM");
 		}
 	}
 
@@ -109,6 +113,9 @@ namespace OwnVoices
 			if (!info || info->parentTopic != a_topic) {
 				continue;
 			}
+			if (Game::Canary::ConditionsProblem(info)) {
+				return nullptr;
+			}
 			if (Passes(info, a_who, a_player)) {
 				return info;
 			}
@@ -155,7 +162,7 @@ namespace OwnVoices
 		std::string file = FileOf(a_answer);
 		std::transform(file.begin(), file.end(), file.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 		if (low.find("warband.esp") != std::string::npos) {
-			logger::info("own voices: off until the game restarts: Warband's line {:06X} pointed at {:08X} ({}) is still voiced as '{}'",
+			logger::info("own voices: OFF this session: Warband's line {:06X} pointed at {:08X} ({}) is still voiced as '{}'",
 				ours[a_i]->GetLocalFormID(), a_answer->GetFormID(), FileOf(a_answer), voice);
 			off = true;
 			return false;
@@ -174,7 +181,7 @@ namespace OwnVoices
 	inline void Point()
 	{
 		Clear();
-		if (!ready || off) {
+		if (!ready || off || !canProve) {
 			return;
 		}
 		auto* topics = RE::MenuTopicManager::GetSingleton();
@@ -191,6 +198,13 @@ namespace OwnVoices
 			}
 		}
 		for (std::size_t i = 0; i < kLines.size(); ++i) {
+			if (const char* problem = Game::Canary::ConditionsProblem(ours[i])) {
+				logger::info("own voices: OFF this session: Warband's line {:06X} does not look like a dialogue line ({})",
+					ours[i]->GetLocalFormID(), problem);
+				off = true;
+				Clear();
+				return;
+			}
 			auto* answer = Answer(theirs[i], who, player);
 			if (!answer) {
 				continue;

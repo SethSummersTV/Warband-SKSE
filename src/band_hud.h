@@ -1,6 +1,8 @@
 #pragma once
 #include "SKSEMenuFramework.h"
-#include "window_input.h"
+#include "game/Canary.h"
+#include "game/ControlMap.h"
+#include "game/Window.h"
 #include "hud_extras.h"
 #include "party_sheet_api.h"
 #include "utf8_path.h"
@@ -57,6 +59,11 @@ namespace BandHUD
 	inline SKSEMenuFramework::Model::WindowInterface* moveWindow = nullptr;
 	inline std::vector<std::string> faceKeys;
 	inline std::unordered_map<std::uint32_t, std::string> portraitCache;
+
+	inline bool LayoutsOk()
+	{
+		return Game::Canary::actors.load() && Game::Canary::hud.load();
+	}
 
 	inline std::string Norm(std::string_view a_s)
 	{
@@ -339,6 +346,10 @@ namespace BandHUD
 	inline void RefreshMenus()
 	{
 		bool hide = true;
+		if (!Game::Canary::ran.load() || !LayoutsOk()) {
+			menusHide.store(true);
+			return;
+		}
 		if (auto* ui = RE::UI::GetSingleton()) {
 			hide = false;
 			consoleOpen.store(ui->IsMenuOpen(RE::Console::MENU_NAME));
@@ -379,12 +390,29 @@ namespace BandHUD
 
 	inline void Snapshot()
 	{
+		if (!Game::Canary::ran.load()) {
+			bool asked;
+			{
+				std::lock_guard g(lock);
+				asked = !roster.empty() || inspect.until > NowMs();
+			}
+			if (!asked) {
+				return;
+			}
+			Game::Canary::EnsureRan();
+		}
+		if (!LayoutsOk()) {
+			std::lock_guard g(lock);
+			cards.clear();
+			inspect.until = 0;
+			return;
+		}
 		RefreshMenus();
 		std::vector<Card> next;
 		auto* player = RE::PlayerCharacter::GetSingleton();
 		bool active = player && player->IsInCombat();
 		float yaw = 0.0f;
-		if (auto* camera = RE::PlayerCamera::GetSingleton(); camera && camera->cameraRoot) {
+		if (auto* camera = Game::Canary::camera.load() ? RE::PlayerCamera::GetSingleton() : nullptr; camera && camera->cameraRoot) {
 			const auto& r = camera->cameraRoot->world.rotate;
 			yaw = std::atan2(r.entry[0][1], r.entry[1][1]);
 		}
@@ -505,7 +533,7 @@ namespace BandHUD
 
 	inline bool CursorInGame(const IG::ImVec2& a_display, IG::ImVec2& a_out)
 	{
-		const HWND hwnd = Win::Window();
+		const HWND hwnd = Game::Window();
 		if (!hwnd || hwnd != GetForegroundWindow()) {
 			return false;
 		}
@@ -659,7 +687,7 @@ namespace BandHUD
 			static auto lastLog = std::chrono::steady_clock::time_point{};
 			if (const auto now = std::chrono::steady_clock::now(); now - lastLog > std::chrono::milliseconds(700)) {
 				lastLog = now;
-				logger::debug("band HUD move ({}): mouse {:.0f},{:.0f} down {} inside {} frame {:.0f},{:.0f} {:.0f}x{:.0f}",
+				logger::info("band HUD move ({}): mouse {:.0f},{:.0f} down {} inside {} frame {:.0f},{:.0f} {:.0f}x{:.0f}",
 					psEdit ? "Party Sheet HUD Settings" : "move key", mp.x, mp.y, down, inside, winPos.x, winPos.y, winSize.x, winSize.y);
 			}
 			if (down && !dragging && inside) {
@@ -874,13 +902,13 @@ namespace BandHUD
 	{
 		static bool wasDown = true;
 		const std::uint32_t key = moveKey;
-		const bool watch = a_gameInFront && moveWindow && !screenOpen.load() && !PartySheet::api.load() && Win::VirtualKeyOf(key) != 0;
+		const bool watch = a_gameInFront && moveWindow && !screenOpen.load() && !PartySheet::api.load() && Game::VirtualKeyOf(key) != 0;
 		if (!watch) {
 			wasDown = true;
 			return;
 		}
 		bool       tapped = false;
-		const bool down = Win::ScanKeyState(key, tapped);
+		const bool down = Game::ScanKeyState(key, tapped);
 		if (!wasDown && (down || tapped)) {
 			movePressMs.store(NowMs());
 		}
@@ -890,7 +918,7 @@ namespace BandHUD
 	inline void PollMoveKey()
 	{
 		const auto pressed = movePressMs.exchange(0);
-		if (pressed == 0 || NowMs() - pressed > 150 || !moveWindow) {
+		if (pressed == 0 || NowMs() - pressed > 150 || !moveWindow || !LayoutsOk()) {
 			return;
 		}
 		if (!moveWindow->IsOpen.load()) {
@@ -898,7 +926,7 @@ namespace BandHUD
 			if (!ui || ui->GameIsPaused() || consoleOpen.load()) {
 				return;
 			}
-			if (const auto* controls = RE::ControlMap::GetSingleton(); controls && controls->GetRuntimeData().textEntryCount > 0) {
+			if (Game::TextEntryCount() > 0) {
 				return;
 			}
 		}
@@ -931,7 +959,7 @@ namespace BandHUD
 	inline bool Ready()
 	{
 		try {
-			return SKSEMenuFramework::IsInstalled();
+			return LayoutsOk() && SKSEMenuFramework::IsInstalled();
 		} catch (...) {
 			return false;
 		}
